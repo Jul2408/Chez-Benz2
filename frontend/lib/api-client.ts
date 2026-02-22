@@ -17,7 +17,7 @@ async function refreshAccessToken(): Promise<string | null> {
     if (!refreshToken) return null;
 
     try {
-        const response = await fetch(`${API_URL}/auth/token/refresh`, {
+        const response = await fetch(`${API_URL}/auth/token/refresh/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ refresh: refreshToken }),
@@ -68,9 +68,10 @@ export async function fetchApi<T>(
     let baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
     let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
 
-    // Politique STRICTE No-Slash pour O2Switch : on retire tout slash final
-    if (cleanEndpoint.endsWith('/') && cleanEndpoint.length > 1) {
-        cleanEndpoint = cleanEndpoint.slice(0, -1);
+    // SOLUTION DEFINITIVE : On s'assure que l'URL se termine TOUJOURS par un slash.
+    // Cela évite que Django/O2Switch ne tente une redirection (307)
+    if (!cleanEndpoint.endsWith('/') && !cleanEndpoint.includes('?')) {
+        cleanEndpoint = `${cleanEndpoint}/`;
     }
 
     const fullUrl = `${baseUrl}${cleanEndpoint}`;
