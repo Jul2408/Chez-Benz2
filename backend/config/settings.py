@@ -11,10 +11,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("SECRET_KEY", "prod-secret-key-placeholder")
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-# Fix pour o2switch (empêche les redirections malvenues)
+# Configuration critique pour O2Switch & Passenger
+ALLOWED_HOSTS = ['api.chezben2.com', 'localhost', '127.0.0.1', '.vercel.app']
 FORCE_SCRIPT_NAME = ''
-APPEND_SLASH = False
-ALLOWED_HOSTS = ['api.chezben2.com', 'localhost', '127.0.0.1']
+APPEND_SLASH = False # INTERDICTION de rediriger les URLs
 
 # ==============================
 # APPLICATIONS
@@ -27,16 +27,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # Third party
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'drf_spectacular',
     'django_filters',
-
-    # Local apps
     'users.apps.UsersConfig',
     'listings.apps.ListingsConfig',
     'messaging.apps.MessagingConfig',
@@ -44,12 +40,8 @@ INSTALLED_APPS = [
     'core.apps.CoreConfig',
 ]
 
-# ==============================
-# MIDDLEWARE (CORS EN PREMIER !!!)
-# ==============================
-
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # ðŸ”¥ DOIT Ãªtre en premier
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -61,11 +53,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
-WSGI_APPLICATION = 'config.wsgi.application'
-
-# ==============================
-# TEMPLATES
-# ==============================
 
 TEMPLATES = [
     {
@@ -83,43 +70,50 @@ TEMPLATES = [
     },
 ]
 
-# ==============================
-# DATABASE
-# ==============================
+WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get("DATABASE_URL", "sqlite:///db.sqlite3"),
         conn_max_age=600,
-        ssl_require=not DEBUG
+        ssl_require=False # Souvent nécessaire sur mutualisé
     )
 }
 
-# ==============================
-# INTERNATIONALIZATION
-# ==============================
-
-LANGUAGE_CODE = 'fr-fr'
-TIME_ZONE = 'Africa/Douala'
-USE_I18N = True
-USE_TZ = True
-
-# ==============================
-# STATIC & MEDIA
-# ==============================
-
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 # ==============================
-# REST FRAMEWORK
+# SÉCURITÉ & PROXY (CRITIQUE O2SWITCH)
+# ==============================
+
+# On dit à Django que le HTTPS est géré en amont par O2Switch
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# TRÈS IMPORTANT : On ne force PAS la redirection SSL dans Django
+# car cela crée la fameuse erreur 307 lors des POST (Login)
+SECURE_SSL_REDIRECT = False 
+
+# On active les cookies sécurisés car le site est en HTTPS
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SAMESITE = 'None'
+
+# ==============================
+# CORS & CSRF
+# ==============================
+
+CORS_ALLOW_ALL_ORIGINS = True # Pour le debug prod, on pourra restreindre après
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = [
+    "https://chez-benz2.vercel.app",
+    "https://api.chezben2.com",
+]
+
+# ==============================
+# REST FRAMEWORK & JWT
 # ==============================
 
 REST_FRAMEWORK = {
@@ -130,94 +124,30 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
-    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
-    'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler'
 }
-
-# ==============================
-# JWT
-# ==============================
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
-    'USER_ID_FIELD': 'id',
-    'USER_ID_CLAIM': 'user_id',
 }
 
 # ==============================
-# CORS CONFIGURATION
+# STATIC & MEDIA
 # ==============================
 
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://chez-benz2.vercel.app",
-    "https://api.chezben2.com",
-]
-
-# Configuration des cookies pour le cross-origin (Vercel <-> o2switch)
-CSRF_COOKIE_SAMESITE = 'None'
-SESSION_COOKIE_SAMESITE = 'None'
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
-
-# ==============================
-# PRODUCTION SECURITY
-# ==============================
-
-# 🔥 IMPORTANT POUR O2SWITCH (évite 307)
-USE_X_FORWARDED_HOST = True
-USE_X_FORWARDED_PORT = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-# On désactive la redirection SSL interne de Django car O2Switch gère le SSL en amont.
-# La laisser à True provoquerait des erreurs 307/301 infinies ou des blocages CORS.
-SECURE_SSL_REDIRECT = False
-
-if not DEBUG:
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-
-# ==============================
-# LOGGING
-# ==============================
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
-    },
+STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
-# ==============================
-# EMAIL
-# ==============================
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get(
-    'DEFAULT_FROM_EMAIL',
-    'Chez-BEN2 <noreply@chezben2.com>'
-)
-
-if DEBUG and not EMAIL_HOST_USER:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+LANGUAGE_CODE = 'fr-fr'
+TIME_ZONE = 'Africa/Douala'
+USE_I18N = True
+USE_TZ = True
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
