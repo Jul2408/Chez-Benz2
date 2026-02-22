@@ -15,7 +15,7 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "api.chezben2.com").split(",")
 
 # Fix pour o2switch (empêche les redirections malvenues)
 FORCE_SCRIPT_NAME = ''
-APPEND_SLASH = False
+APPEND_SLASH = True
 
 # ==============================
 # APPLICATIONS

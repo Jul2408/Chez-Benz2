@@ -67,10 +67,12 @@ export async function fetchApi<T>(
     // Nettoyer l'URL pour éviter les redirections 307
     let baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
     let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    // Enlever le slash final de l'endpoint si présent (puisque APPEND_SLASH = False)
-    if (cleanEndpoint.endsWith('/') && cleanEndpoint.length > 1) {
-        cleanEndpoint = cleanEndpoint.slice(0, -1);
+
+    // S'assurer que l'endpoint se termine par un slash (pour correspondre au backend Django)
+    if (!cleanEndpoint.endsWith('/') && !cleanEndpoint.includes('?')) {
+        cleanEndpoint = `${cleanEndpoint}/`;
     }
+
     const fullUrl = `${baseUrl}${cleanEndpoint}`;
 
     const response = await fetch(fullUrl, {
