@@ -13,6 +13,10 @@ DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "api.chezben2.com").split(",")
 
+# Fix pour o2switch (empêche les redirections malvenues)
+FORCE_SCRIPT_NAME = ''
+APPEND_SLASH = False
+
 # ==============================
 # APPLICATIONS
 # ==============================
@@ -178,8 +182,9 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-    # ðŸ”¥ IMPORTANT POUR O2SWITCH (Ã©vite 307)
+    # 🔥 IMPORTANT POUR O2SWITCH (évite 307)
     USE_X_FORWARDED_HOST = True
+    USE_X_FORWARDED_PORT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # ==============================
