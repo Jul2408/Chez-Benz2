@@ -606,6 +606,9 @@ export async function getCategories(): Promise<Category[]> {
  * Récupérer le nombre de notifications non lues
  */
 export async function getUnreadNotificationsCount(): Promise<number> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('chezben2_token') : null;
+    if (!token || token === 'undefined' || token === 'null') return 0;
+
     try {
         const response = await fetchApi<any>('/notifications/?unread=true');
         // Handle both paginated results and direct arrays
@@ -876,6 +879,9 @@ export async function sendMessage(conversationId: string, content: string) {
  * Récupérer le nombre de messages non lus
  */
 export async function getUnreadMessagesCount(): Promise<number> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('chezben2_token') : null;
+    if (!token || token === 'undefined' || token === 'null') return 0;
+
     try {
         const response = await fetchApi<any>('/messaging/conversations/unread_count/');
         return response.unread_count || 0;

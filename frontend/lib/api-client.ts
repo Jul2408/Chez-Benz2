@@ -64,7 +64,12 @@ export async function fetchApi<T>(
     }
 
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    // Nettoyer l'URL pour éviter les doubles slashes (cause fréquente de redirection 307)
+    const baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const fullUrl = `${baseUrl}${cleanEndpoint}`;
+
+    const response = await fetch(fullUrl, {
         ...options,
         headers,
     });
