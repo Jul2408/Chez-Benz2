@@ -11,11 +11,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("SECRET_KEY", "prod-secret-key-placeholder")
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "api.chezben2.com").split(",")
-
 # Fix pour o2switch (empêche les redirections malvenues)
 FORCE_SCRIPT_NAME = ''
-APPEND_SLASH = True
+APPEND_SLASH = False
+ALLOWED_HOSTS = ['api.chezben2.com', 'localhost', '127.0.0.1']
 
 # ==============================
 # APPLICATIONS
@@ -173,6 +172,12 @@ SESSION_COOKIE_SECURE = True
 # PRODUCTION SECURITY
 # ==============================
 
+# 🔥 IMPORTANT POUR O2SWITCH (évite 307)
+# On les met ici pour qu'ils soient actifs même si DEBUG est True sur le serveur
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 if not DEBUG:
     # Sur o2switch, le SSL est souvent géré par le serveur web (Apache).
     # Si Django force la redirection, cela peut causer des boucles ou des 307 indésirables.
@@ -181,11 +186,6 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-
-    # 🔥 IMPORTANT POUR O2SWITCH (évite 307)
-    USE_X_FORWARDED_HOST = True
-    USE_X_FORWARDED_PORT = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # ==============================
 # LOGGING
