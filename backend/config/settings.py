@@ -173,16 +173,15 @@ SESSION_COOKIE_SECURE = True
 # ==============================
 
 # 🔥 IMPORTANT POUR O2SWITCH (évite 307)
-# On les met ici pour qu'ils soient actifs même si DEBUG est True sur le serveur
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+# On désactive la redirection SSL interne de Django car O2Switch gère le SSL en amont.
+# La laisser à True provoquerait des erreurs 307/301 infinies ou des blocages CORS.
+SECURE_SSL_REDIRECT = False
+
 if not DEBUG:
-    # Sur o2switch, le SSL est souvent géré par le serveur web (Apache).
-    # Si Django force la redirection, cela peut causer des boucles ou des 307 indésirables.
-    SECURE_SSL_REDIRECT = False  
-    
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
