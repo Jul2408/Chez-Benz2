@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.chezben2.com/api/v1';
 
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
@@ -17,7 +17,7 @@ async function refreshAccessToken(): Promise<string | null> {
     if (!refreshToken) return null;
 
     try {
-        const response = await fetch(`${API_URL}/auth/token/refresh/`, {
+        const response = await fetch(`${API_URL}/auth/token/refresh`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ refresh: refreshToken }),
@@ -68,9 +68,9 @@ export async function fetchApi<T>(
     let baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
     let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
 
-    // S'assurer que l'endpoint se termine par un slash (pour correspondre au backend Django)
-    if (!cleanEndpoint.endsWith('/') && !cleanEndpoint.includes('?')) {
-        cleanEndpoint = `${cleanEndpoint}/`;
+    // Politique STRICTE No-Slash pour O2Switch : on retire tout slash final
+    if (cleanEndpoint.endsWith('/') && cleanEndpoint.length > 1) {
+        cleanEndpoint = cleanEndpoint.slice(0, -1);
     }
 
     const fullUrl = `${baseUrl}${cleanEndpoint}`;
