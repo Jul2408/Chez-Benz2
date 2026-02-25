@@ -34,4 +34,43 @@ class ListingController extends Controller
 
         return response()->json($listing);
     }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id',
+            'description' => 'required|string',
+            'price' => 'required|numeric',
+            'city' => 'required|string',
+            'region' => 'required|string',
+            'condition' => 'required|string',
+            'photos' => 'nullable|array',
+            'photos.*' => 'image|mimes:jpeg,png,jpg,webp|max:2048',
+        ]);
+
+        $listing = Listing::create([
+            'user_id' => $request->user()->id,
+            'category_id' => $request->category_id,
+            'title' => $request->title,
+            'description' => $request->description,
+            'price' => $request->price,
+            'city' => $request->city,
+            'region' => $request->region,
+            'condition' => $request->condition,
+            'status' => 'ACTIVE',
+        ]);
+
+        if ($request->hasFile('photos')) {
+            foreach ($request->file('photos') as $index => $photo) {
+                $path = $photo->store('listings', 'public');
+                $listing->photos()->create([
+                    'image_path' => $path,
+                    'is_cover' => $index === 0,
+                ]);
+            }
+        }
+
+        return response()->json($listing->load('photos'), 201);
+    }
 }
