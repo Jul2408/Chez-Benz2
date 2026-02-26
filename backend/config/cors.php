@@ -26,7 +26,9 @@ return [
         'https://api.chezben2.com'
     ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '#^https://.*\.up\.railway\.app$#',
+    ],
 
     'allowed_headers' => ['*'],
 
