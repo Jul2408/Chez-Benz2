@@ -5,16 +5,23 @@
 
     RewriteEngine On
 
-    # Handle Authorization Header
+    # --- DÉBUT DU PATCH CORS POUR O2SWITCH ---
+    # Autoriser l'origine du frontend Vercel
+    Header set Access-Control-Allow-Origin "https://chez-benz2.vercel.app"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-CSRF-TOKEN"
+    Header set Access-Control-Allow-Credentials "true"
+
+    # Répondre immédiatement aux requêtes OPTIONS (Preflight) sans passer par Laravel
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=204,L]
+    # --- FIN DU PATCH CORS ---
+
+    # Gérer le Header Authorization
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-    # Redirect Trailing Slashes If Not A Folder...
-    # RewriteCond %{REQUEST_FILENAME} !-d
-    # RewriteCond %{REQUEST_URI} (.+)/$
-    # RewriteRule ^ %1 [L,R=301]
-
-    # Send Requests To Public Directory...
+    # Envoyer toutes les requêtes vers le dossier Public
     RewriteCond %{REQUEST_URI} !^/public/
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
