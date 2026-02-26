@@ -74,6 +74,8 @@ export function DashboardSidebar({ profile }: DashboardSidebarProps) {
         }
     ];
 
+    const { unreadNotifications, unreadMessages } = useNotifications();
+
     return (
         <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-white/5">
             {/* Logo & Retour Accueil */}
@@ -119,7 +121,6 @@ export function DashboardSidebar({ profile }: DashboardSidebarProps) {
                         <div className="space-y-1">
                             {section.items.map((item) => {
                                 const isActive = pathname === item.href;
-                                const { unreadNotifications, unreadMessages } = useNotifications();
                                 const badgeCount = item.title === "Notifications" ? unreadNotifications : (item.title === "Messages Ventes" ? unreadMessages : 0);
 
                                 return (

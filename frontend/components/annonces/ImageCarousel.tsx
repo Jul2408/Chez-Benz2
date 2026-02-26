@@ -38,7 +38,9 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
     const scrollNext = React.useCallback(() => mainEmblaApi && (mainEmblaApi as any).scrollNext(), [mainEmblaApi]);
     const scrollTo = React.useCallback((index: number) => mainEmblaApi && (mainEmblaApi as any).scrollTo(index), [mainEmblaApi]);
 
-    if (!images || images.length === 0) {
+    const validImages = (images || []).filter(img => typeof img === 'string' && img.trim() !== '');
+
+    if (validImages.length === 0) {
         return (
             <div className="aspect-[4/3] bg-muted rounded-xl flex items-center justify-center text-muted-foreground">
                 Pas d'image disponible
@@ -52,7 +54,7 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
             <div className="relative group">
                 <div className="overflow-hidden rounded-xl bg-black aspect-[4/3]" ref={mainEmblaRef as any}>
                     <div className="flex touch-pan-y">
-                        {images.map((src, index) => (
+                        {validImages.map((src, index) => (
                             <div className="flex-[0_0_100%] min-w-0 relative aspect-[4/3]" key={index}>
                                 <Image
                                     src={src}
@@ -68,7 +70,7 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
                 </div>
 
                 {/* Navigation Buttons */}
-                {images.length > 1 && (
+                {validImages.length > 1 && (
                     <>
                         <Button
                             {...({
@@ -93,17 +95,17 @@ export function ImageCarousel({ images, title }: ImageCarouselProps) {
 
                         {/* Counter Badge */}
                         <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-medium pointer-events-none">
-                            {selectedIndex + 1} / {images.length}
+                            {selectedIndex + 1} / {validImages.length}
                         </div>
                     </>
                 )}
             </div>
 
             {/* Thumbnails */}
-            {images.length > 1 && (
+            {validImages.length > 1 && (
                 <div className="overflow-hidden px-1" ref={thumbEmblaRef as any}>
                     <div className="flex -ml-2 gap-2 p-1">
-                        {images.map((src, index) => (
+                        {validImages.map((src, index) => (
                             <button
                                 key={index}
                                 onClick={() => scrollTo(index)}

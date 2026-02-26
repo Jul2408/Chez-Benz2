@@ -84,16 +84,21 @@ const nextConfig = {
         pathname: '/**',
       },
       {
+        protocol: 'https',
+        hostname: 'api.chezben2.com',
+        pathname: '/**',
+      },
+      {
         protocol: 'http',
         hostname: '127.0.0.1',
         port: '8000',
-        pathname: '/media/**',
+        pathname: '/**',
       },
       {
         protocol: 'http',
         hostname: 'localhost',
         port: '8000',
-        pathname: '/media/**',
+        pathname: '/**',
       },
     ],
     formats: ['image/avif', 'image/webp'],

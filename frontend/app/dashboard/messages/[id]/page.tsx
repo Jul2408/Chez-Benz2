@@ -66,8 +66,10 @@ export default function MessagePage({ params }: MessagePageProps) {
         return null; // Will redirect in useEffect
     }
 
-    // Check if current user is seller (listing might be an object or ID depending on serializer)
-    const isSeller = conversation.listing?.user === user?.id || conversation.listing?.user?.id === user?.id;
+    // Check if current user is seller
+    const isSeller = conversation.listing?.user_id === user?.id ||
+        conversation.listing?.user === user?.id ||
+        conversation.listing?.user?.id === user?.id;
 
     return (
         <div className="w-full h-full md:container md:py-8 animate-in fade-in duration-500">

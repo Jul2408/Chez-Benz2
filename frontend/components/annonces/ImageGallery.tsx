@@ -17,8 +17,10 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
+    const validImages = (images || []).filter(img => img && img.url && img.url.trim() !== '');
+
     // Fallback for no images
-    if (!images || images.length === 0) {
+    if (validImages.length === 0) {
         return (
             <div className="aspect-[4/3] bg-muted rounded-xl flex items-center justify-center text-muted-foreground">
                 Aucune image
@@ -28,12 +30,12 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
 
     const nextImage = (e?: React.MouseEvent) => {
         e?.stopPropagation();
-        setCurrentIndex((prev) => (prev + 1) % images.length);
+        setCurrentIndex((prev) => (prev + 1) % validImages.length);
     };
 
     const prevImage = (e?: React.MouseEvent) => {
         e?.stopPropagation();
-        setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+        setCurrentIndex((prev) => (prev - 1 + validImages.length) % validImages.length);
     };
 
     return (
@@ -44,7 +46,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
                 onClick={() => setIsLightboxOpen(true)}
             >
                 <Image
-                    src={images[currentIndex].url}
+                    src={validImages[currentIndex].url}
                     alt={`Photo ${currentIndex + 1} - ${title}`}
                     fill
                     className="object-contain"
@@ -52,7 +54,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
                 />
 
                 {/* Navigation Arrows */}
-                {images.length > 1 && (
+                {validImages.length > 1 && (
                     <>
                         <Button
                             size="icon"
@@ -75,16 +77,16 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
 
                 {/* Counter */}
                 <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">
-                    {currentIndex + 1} / {images.length}
+                    {currentIndex + 1} / {validImages.length}
                 </div>
             </div>
 
             {/* Thumbnails */}
-            {images.length > 1 && (
+            {validImages.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x">
-                    {images.map((image, index) => (
+                    {validImages.map((image, index) => (
                         <button
-                            key={image.id}
+                            key={image.id || index}
                             onClick={() => setCurrentIndex(index)}
                             className={cn(
                                 "relative flex-shrink-0 size-20 rounded-lg overflow-hidden border-2 transition-all cursor-pointer snap-start",
@@ -119,7 +121,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
                                 className="text-white hover:bg-white/10 rounded-full"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    window.open(images[currentIndex].url, '_blank');
+                                    window.open(validImages[currentIndex].url, '_blank');
                                 }}
                             >
                                 <Download className="size-5" />
@@ -152,7 +154,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
                             onClick={(e) => e.stopPropagation()}
                         >
                             <Image
-                                src={images[currentIndex].url}
+                                src={validImages[currentIndex].url}
                                 alt={`Zoom photo ${currentIndex + 1}`}
                                 fill
                                 className="object-contain"
@@ -170,7 +172,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
                         </Button>
 
                         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/10 text-white px-4 py-1.5 rounded-full text-sm backdrop-blur-md">
-                            {currentIndex + 1} sur {images.length}
+                            {currentIndex + 1} sur {validImages.length}
                         </div>
                     </motion.div>
                 )}

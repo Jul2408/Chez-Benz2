@@ -23,6 +23,7 @@ interface AnnonceCardProps {
 export function AnnonceCard({ annonce, priority = false }: AnnonceCardProps) {
     const [isFavorited, setIsFavorited] = useState((annonce as any).is_favorited || false);
     const [isLiking, setIsLiking] = useState(false);
+    const [imgSrc, setImgSrc] = useState(annonce.cover_image || '/images/placeholders/car.png');
 
     const isNew = differenceInDays(new Date(), new Date(annonce.created_at)) <= 3;
     const isUrgent = annonce.is_urgent && (!(annonce as any).urgent_until || new Date((annonce as any).urgent_until) > new Date());
@@ -56,13 +57,14 @@ export function AnnonceCard({ annonce, priority = false }: AnnonceCardProps) {
                 <Link href={`/annonces/${annonce.slug}`} className="block w-full h-full">
                     {annonce.cover_image ? (
                         <Image
-                            src={annonce.cover_image}
+                            src={imgSrc}
                             alt={annonce.title}
                             fill
                             className="object-cover transition-transform duration-500 group-hover:scale-110"
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                             priority={priority}
-                            unoptimized={annonce.cover_image.startsWith('data:')}
+                            unoptimized={imgSrc.startsWith('data:')}
+                            onError={() => setImgSrc('/images/placeholders/car.png')}
                         />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -141,7 +143,7 @@ export function AnnonceCard({ annonce, priority = false }: AnnonceCardProps) {
                 {annonce.user && (
                     <div className="flex items-center gap-2 mt-1">
                         <div className="size-5 rounded-full bg-muted overflow-hidden relative">
-                            {annonce.user.avatar_url ? (
+                            {annonce.user.avatar_url && annonce.user.avatar_url.trim() !== '' ? (
                                 <Image src={annonce.user.avatar_url} alt={annonce.user.full_name || ''} fill className="object-cover" />
                             ) : (
                                 <div className="w-full h-full bg-primary/20 flex items-center justify-center text-[8px] text-primary font-bold">

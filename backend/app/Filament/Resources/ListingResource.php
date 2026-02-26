@@ -28,11 +28,11 @@ class ListingResource extends Resource
                         Forms\Components\TextInput::make('title')
                             ->required()
                             ->maxLength(255)
-                            ->live(onBlur: true)
+                            ->live()
                             ->afterStateUpdated(fn (Forms\Set $set, ?string $state) => $set('slug', \Illuminate\Support\Str::slug($state))),
                         Forms\Components\TextInput::make('slug')
                             ->required()
-                            ->unique(Listing::class, 'slug', ignoreRecord: true),
+                            ->unique(null, null, null, true),
                         Forms\Components\Select::make('user_id')
                             ->relationship('user', 'email')
                             ->required()
@@ -81,6 +81,35 @@ class ListingResource extends Resource
                         Forms\Components\Toggle::make('is_featured')
                             ->default(false),
                     ])->columns(2),
+
+                Forms\Components\Section::make('Photos')
+                    ->schema([
+                        Forms\Components\Repeater::make('photos')
+                            ->relationship('photos')
+                            ->schema([
+                                Forms\Components\FileUpload::make('image_path')
+                                    ->label('Image')
+                                    ->image()
+                                    ->disk('public')
+                                    ->directory('listings')
+                                    ->required(),
+                                Forms\Components\Toggle::make('is_cover')
+                                    ->label('Photo de couverture')
+                                    ->default(false),
+                            ])
+                            ->grid(2)
+                            ->columnSpanFull(),
+                    ]),
+
+                Forms\Components\Section::make('Attributs Techniques')
+                    ->description('Caractéristiques spécifiques selon la catégorie (ex: Kilométrage, Marque, etc.)')
+                    ->schema([
+                        Forms\Components\KeyValue::make('extra_attributes')
+                            ->label('Détails')
+                            ->keyLabel('Propriété')
+                            ->valueLabel('Valeur')
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 
@@ -88,6 +117,11 @@ class ListingResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\ImageColumn::make('photos.image_path')
+                    ->label('Aperçu')
+                    ->circular()
+                    ->disk('public')
+                    ->limit(1),
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
                     ->sortable(),
@@ -99,6 +133,9 @@ class ListingResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('price')
                     ->money('XAF')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('views_count')
+                    ->label('Vues')
                     ->sortable(),
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors([
@@ -113,7 +150,7 @@ class ListingResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
@@ -123,6 +160,10 @@ class ListingResource extends Resource
                         'SOLD' => 'Vendu',
                         'ARCHIVED' => 'Archivé',
                     ]),
+                Tables\Filters\SelectFilter::make('category')
+                    ->relationship('category', 'name'),
+                Tables\Filters\TernaryFilter::make('is_featured')
+                    ->label('Mis en avant'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

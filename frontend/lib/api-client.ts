@@ -53,6 +53,7 @@ export async function fetchApi<T>(
     const token = typeof window !== 'undefined' ? localStorage.getItem('chezben2_token') : null;
 
     const headers = new Headers(options.headers);
+    headers.set('Accept', 'application/json');
     const isFormData = options.body instanceof FormData;
 
     if (!isFormData) {
@@ -64,14 +65,13 @@ export async function fetchApi<T>(
     }
 
 
-    // Nettoyer l'URL pour éviter les redirections 307
+    // Nettoyer l'URL
     let baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
     let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
 
-    // SOLUTION DEFINITIVE : On s'assure que l'URL se termine TOUJOURS par un slash.
-    // Cela évite que Django/O2Switch ne tente une redirection (307)
-    if (!cleanEndpoint.endsWith('/') && !cleanEndpoint.includes('?')) {
-        cleanEndpoint = `${cleanEndpoint}/`;
+    // On retire le slash final s'il existe (standard Laravel)
+    if (cleanEndpoint.endsWith('/') && cleanEndpoint.length > 1) {
+        cleanEndpoint = cleanEndpoint.slice(0, -1);
     }
 
     const fullUrl = `${baseUrl}${cleanEndpoint}`;

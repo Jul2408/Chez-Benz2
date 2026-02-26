@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import { AnnonceCard } from './AnnonceCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -23,6 +25,8 @@ interface AnnonceGridProps {
 }
 
 function AnnonceListItem({ annonce }: { annonce: AnnonceCardType }) {
+    const [imgSrc, setImgSrc] = useState(annonce.cover_image || '/images/placeholders/car.png');
+
     return (
         <Link href={`/annonces/${annonce.slug || annonce.id}`} className="group block">
             <div className="flex bg-card rounded-xl border overflow-hidden transition-all hover:shadow-md h-40">
@@ -30,10 +34,11 @@ function AnnonceListItem({ annonce }: { annonce: AnnonceCardType }) {
                 <div className="relative w-48 shrink-0 bg-muted">
                     {annonce.cover_image ? (
                         <Image
-                            src={annonce.cover_image}
+                            src={imgSrc}
                             alt={annonce.title}
                             fill
                             className="object-cover transition-transform group-hover:scale-105"
+                            onError={() => setImgSrc('/images/placeholders/car.png')}
                         />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted">

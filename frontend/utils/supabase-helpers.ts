@@ -18,21 +18,45 @@ import { fetchApi } from '@/lib/api-client';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 /**
- * Formater l'URL de l'image pour le backend Django
+ * Formater l'URL de l'image pour le backend (Django ou Laravel)
  */
-export function formatImageUrl(url: string | null): string {
-    if (!url) return '/assets/placeholder.png';
+export function formatImageUrl(url: string | null | undefined): string {
+    // Return placeholder if url is null, undefined, or empty string (even with whitespace)
+    if (!url || (typeof url === 'string' && url.trim() === '')) {
+        return '/images/placeholders/car.png';
+    }
+
+    // If it's already a full URL, return it
     if (url.startsWith('http')) return url;
+
+    // If it's a data URL (base64 preview), return it
+    if (url.startsWith('data:')) return url;
 
     let baseDomain = 'http://localhost:8000';
     try {
         const urlObj = new URL(API_URL);
         baseDomain = `${urlObj.protocol}//${urlObj.host}`;
     } catch (e) {
-        baseDomain = API_URL.split('/api/v1')[0];
+        if (API_URL.includes('/api/v1')) {
+            baseDomain = API_URL.split('/api/v1')[0];
+        } else {
+            baseDomain = API_URL;
+        }
     }
 
-    const cleanPath = url.startsWith('/') ? url : `/${url}`;
+    // Supprimer le slash final si présent
+    if (baseDomain.endsWith('/')) {
+        baseDomain = baseDomain.slice(0, -1);
+    }
+
+    // Gestion de la transition Django -> Laravel
+    let cleanPath = url;
+    if (!url.startsWith('/media/') && !url.startsWith('/storage/') && !url.startsWith('media/') && !url.startsWith('storage/')) {
+        cleanPath = `/storage/${url.startsWith('/') ? url.slice(1) : url}`;
+    } else {
+        cleanPath = url.startsWith('/') ? url : `/${url}`;
+    }
+
     return `${baseDomain}${cleanPath}`;
 }
 
@@ -50,7 +74,7 @@ export async function signUpWithEmail(
     role: string = 'USER'
 ) {
     try {
-        const response = await fetchApi<any>('/auth/register/', {
+        const response = await fetchApi<any>('/auth/register', {
             method: 'POST',
             body: JSON.stringify({
                 email,
@@ -72,7 +96,7 @@ export async function signUpWithEmail(
  */
 export async function signInWithEmail(email: string, password: string) {
     try {
-        const response = await fetchApi<{ access: string; refresh: string }>('/auth/login/', {
+        const response = await fetchApi<{ access: string; refresh: string }>('/auth/login', {
             method: 'POST',
             body: JSON.stringify({ email, password }),
         });
@@ -113,7 +137,7 @@ export async function getCurrentProfile(): Promise<Profile | null> {
     if (!token) return null;
 
     try {
-        const userData = await fetchApi<any>('/auth/me/');
+        const userData = await fetchApi<any>('/auth/me');
 
         // Map Django user + profile to frontend Profile type
         return {
@@ -203,72 +227,55 @@ export async function updateProfile(updates: any) {
 
         if (hasFiles) {
             const formData = new FormData();
+            formData.append('_method', 'PATCH');
+            formData.append('full_name', updates.full_name || '');
+            formData.append('username', updates.username || '');
+            formData.append('phone', updates.phone || '');
+            formData.append('city', updates.city || '');
+            formData.append('region', updates.region || '');
+            formData.append('address', updates.address || '');
+            formData.append('bio', updates.bio || '');
+            formData.append('whatsapp_number', updates.whatsapp || '');
+            formData.append('facebook_url', updates.facebook || '');
+            formData.append('instagram_url', updates.instagram || '');
+            formData.append('website_url', updates.website || '');
+            formData.append('experience_years', (updates.experience || 0).toString());
 
-            // Django UserSerializer with nested profile expects 'profile.field_name' or similar 
-            // but for multipart, it's often easier to send flat and handle in backend OR 
-            // use a specific format. DRF handles nested data in FormData using dot notation for some parsers.
-
-            formData.append('profile.full_name', updates.full_name || '');
-            formData.append('profile.username', updates.username || '');
-            formData.append('profile.phone', updates.phone || '');
-            formData.append('profile.city', updates.city || '');
-            formData.append('profile.region', updates.region || '');
-            formData.append('profile.address', updates.address || '');
-            formData.append('profile.bio', updates.bio || '');
-            formData.append('profile.whatsapp_number', updates.whatsapp || '');
-            formData.append('profile.facebook_url', updates.facebook || '');
-            formData.append('profile.instagram_url', updates.instagram || '');
-            formData.append('profile.website_url', updates.website || '');
-            formData.append('profile.experience_years', (updates.experience || 0).toString());
-
-            formData.append('profile.notification_email', updates.notification_email ? 'true' : 'false');
-            formData.append('profile.notification_push', updates.notification_push ? 'true' : 'false');
-            formData.append('profile.notification_sms', updates.notification_sms ? 'true' : 'false');
+            formData.append('notification_email', updates.notification_email ? 'true' : 'false');
+            formData.append('notification_push', updates.notification_push ? 'true' : 'false');
+            formData.append('notification_sms', updates.notification_sms ? 'true' : 'false');
 
             if (updates.latitude !== undefined && updates.latitude !== null) {
-                formData.append('profile.latitude', updates.latitude.toString());
+                formData.append('latitude', updates.latitude.toString());
             }
             if (updates.longitude !== undefined && updates.longitude !== null) {
-                formData.append('profile.longitude', updates.longitude.toString());
+                formData.append('longitude', updates.longitude.toString());
             }
 
             if (updates.avatar_url instanceof File) {
-                formData.append('profile.avatar', updates.avatar_url);
+                formData.append('avatar', updates.avatar_url);
             }
             if (updates.cover_url instanceof File) {
-                formData.append('profile.cover_image', updates.cover_url);
+                formData.append('cover_image', updates.cover_url);
             }
 
-            return await fetchApi<any>('/auth/me/', {
-                method: 'PATCH',
+            return await fetchApi<any>('/auth/me', {
+                method: 'POST', // Laravel handling for multipart PATCH
                 body: formData,
             });
         }
 
-        // Prepare data for UserSerializer which expects nested profile (JSON version)
+        // Prepare data for flat update
         const djangoData = {
-            profile: {
-                full_name: updates.full_name,
-                username: updates.username,
-                phone: updates.phone,
-                city: updates.city,
-                region: updates.region,
-                address: updates.address,
-                bio: updates.bio,
-                whatsapp_number: updates.whatsapp,
-                facebook_url: updates.facebook,
-                instagram_url: updates.instagram,
-                website_url: updates.website,
-                experience_years: updates.experience,
-                notification_email: updates.notification_email,
-                notification_push: updates.notification_push,
-                notification_sms: updates.notification_sms,
-                latitude: updates.latitude,
-                longitude: updates.longitude,
-            }
+            ...updates,
+            whatsapp_number: updates.whatsapp,
+            facebook_url: updates.facebook,
+            instagram_url: updates.instagram,
+            website_url: updates.website,
+            experience_years: updates.experience,
         };
 
-        return await fetchApi<any>('/auth/me/', {
+        return await fetchApi<any>('/auth/me', {
             method: 'PATCH',
             body: JSON.stringify(djangoData),
         });
@@ -305,10 +312,10 @@ export async function createAnnonce(data: any, files: File[]) {
 
         // Append files
         files.forEach((file) => {
-            formData.append('uploaded_photos', file);
+            formData.append('uploaded_photos[]', file);
         });
 
-        return await fetchApi<any>('/listings/', {
+        return await fetchApi<any>('/listings', {
             method: 'POST',
             body: formData,
         });
@@ -348,12 +355,16 @@ export async function updateAnnonce(id: string, data: any, files: File[]) {
         // Append new files
         if (files && files.length > 0) {
             files.forEach((file) => {
-                formData.append('uploaded_photos', file);
+                formData.append('uploaded_photos[]', file);
             });
         }
 
-        return await fetchApi<any>(`/listings/${id}/`, {
-            method: 'PATCH',
+        // Laravel requirement: multipart/form-data + PATCH doesn't work well
+        // We use POST + _method: PATCH
+        formData.append('_method', 'PATCH');
+
+        return await fetchApi<any>(`/listings/${id}`, {
+            method: 'POST',
             body: formData,
         });
     } catch (error) {
@@ -385,7 +396,7 @@ export async function changePassword(oldPassword: string, newPassword: string) {
  */
 export async function requestPasswordReset(email: string) {
     try {
-        return await fetchApi<any>('/auth/password-reset/', {
+        return await fetchApi<any>('/auth/password-reset', {
             method: 'POST',
             body: JSON.stringify({ email }),
         });
@@ -400,7 +411,7 @@ export async function requestPasswordReset(email: string) {
  */
 export async function confirmPasswordReset(email: string, code: string, newPassword: string) {
     try {
-        return await fetchApi<any>('/auth/password-reset/confirm/', {
+        return await fetchApi<any>('/auth/password-reset/confirm', {
             method: 'POST',
             body: JSON.stringify({
                 email,
@@ -626,7 +637,7 @@ export async function getUnreadNotificationsCount(): Promise<number> {
  */
 export async function getNotifications(): Promise<any[]> {
     try {
-        const response = await fetchApi<any>('/notifications/');
+        const response = await fetchApi<any>('/notifications');
         return Array.isArray(response) ? response : (response.results || []);
     } catch (error) {
         console.error('[API] getNotifications error:', error);
@@ -639,7 +650,7 @@ export async function getNotifications(): Promise<any[]> {
  */
 export async function markNotificationAsRead(id: string) {
     try {
-        return await fetchApi<any>(`/notifications/${id}/mark_as_read/`, {
+        return await fetchApi<any>(`/notifications/${id}/mark_as_read`, {
             method: 'POST',
         });
     } catch (error) {
@@ -709,7 +720,7 @@ export async function getAdminStats() {
  */
 export async function getFavorites(): Promise<AnnonceCard[]> {
     try {
-        const response = await fetchApi<any>('/listings/favorites/');
+        const response = await fetchApi<any>('/profile/favorites');
         const results = Array.isArray(response) ? response : (response.results || []);
 
         return results.map((fav: any) => {
@@ -776,7 +787,7 @@ export async function toggleFavorite(listingId: string) {
  */
 export async function deleteListing(listingId: string) {
     try {
-        return await fetchApi<any>(`/listings/${listingId}/`, {
+        return await fetchApi<any>(`/listings/${listingId}`, {
             method: 'DELETE',
         });
     } catch (error) {
@@ -794,20 +805,24 @@ export async function deleteListing(listingId: string) {
  */
 export async function getConversations() {
     try {
-        const response = await fetchApi<any>('/messaging/conversations/');
+        const response = await fetchApi<any>('/messaging/conversations');
         const results = Array.isArray(response) ? response : (response.results || []);
 
         return results.map((conv: any) => {
             // Identifier l'autre participant
-            const otherUser = conv.participants?.find((p: any) => p.id?.toString() !== (typeof window !== 'undefined' ? localStorage.getItem('chezben2_user_id') : null)) || conv.participants?.[0];
+            const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('chezben2_user_id') : null;
+            const otherUser = conv.participants?.find((p: any) => p.id?.toString() !== currentUserId) || conv.participants?.[0];
 
             return {
                 id: conv.id,
-                listing: conv.listing,
+                listing: conv.listing ? {
+                    ...conv.listing,
+                    cover_image: formatImageUrl(conv.listing.photos?.find((p: any) => p.is_cover)?.image_path || conv.listing.photos?.[0]?.image_path || null)
+                } : null,
                 otherUser: {
                     id: otherUser?.id,
                     full_name: otherUser?.profile?.full_name || 'Utilisateur',
-                    avatar_url: otherUser?.profile?.avatar,
+                    avatar_url: formatImageUrl(otherUser?.profile?.avatar),
                 },
                 last_message_preview: conv.last_message?.content || 'Pas encore de message',
                 last_message_at: conv.last_message?.created_at || conv.updated_at,
@@ -824,7 +839,7 @@ export async function getConversations() {
  */
 export async function getConversation(conversationId: string) {
     try {
-        const conv = await fetchApi<any>(`/messaging/conversations/${conversationId}/`);
+        const conv = await fetchApi<any>(`/messaging/conversations/${conversationId}`);
 
         // Identifier l'autre participant
         const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('chezben2_user_id') : null;
@@ -832,11 +847,14 @@ export async function getConversation(conversationId: string) {
 
         return {
             id: conv.id,
-            listing: conv.listing,
+            listing: conv.listing ? {
+                ...conv.listing,
+                cover_image: formatImageUrl(conv.listing.photos?.find((p: any) => p.is_cover)?.image_path || conv.listing.photos?.[0]?.image_path || null)
+            } : null,
             otherUser: {
                 id: otherUser?.id,
                 full_name: otherUser?.profile?.full_name || 'Utilisateur',
-                avatar_url: otherUser?.profile?.avatar,
+                avatar_url: formatImageUrl(otherUser?.profile?.avatar),
             },
             last_message_preview: conv.last_message?.content || 'Pas encore de message',
             last_message_at: conv.last_message?.created_at || conv.updated_at,
@@ -852,8 +870,17 @@ export async function getConversation(conversationId: string) {
  */
 export async function getMessages(conversationId: string) {
     try {
-        const response = await fetchApi<any>(`/messaging/conversations/${conversationId}/messages/`);
-        return Array.isArray(response) ? response : (response.results || []);
+        const response = await fetchApi<any>(`/messaging/conversations/${conversationId}/messages`);
+        const messages = Array.isArray(response) ? response : (response.results || []);
+
+        return messages.map((msg: any) => ({
+            ...msg,
+            sender: {
+                ...msg.sender,
+                full_name: msg.sender?.profile?.full_name || 'Utilisateur',
+                avatar_url: formatImageUrl(msg.sender?.profile?.avatar),
+            }
+        }));
     } catch (error) {
         console.error('[API] getMessages error:', error);
         return [];
@@ -865,7 +892,7 @@ export async function getMessages(conversationId: string) {
  */
 export async function sendMessage(conversationId: string, content: string) {
     try {
-        return await fetchApi<any>(`/messaging/conversations/${conversationId}/send_message/`, {
+        return await fetchApi<any>(`/messaging/conversations/${conversationId}/send_message`, {
             method: 'POST',
             body: JSON.stringify({ content }),
         });
@@ -883,7 +910,7 @@ export async function getUnreadMessagesCount(): Promise<number> {
     if (!token || token === 'undefined' || token === 'null') return 0;
 
     try {
-        const response = await fetchApi<any>('/messaging/conversations/unread_count/');
+        const response = await fetchApi<any>('/messaging/conversations/unread_count');
         return response.unread_count || 0;
     } catch (error) {
         return 0;
@@ -891,17 +918,25 @@ export async function getUnreadMessagesCount(): Promise<number> {
 }
 
 /**
- * Créer une nouvelle conversation pour une annonce
+ * Créer une nouvelle conversation pour une annonce ET envoyer le premier message.
+ * Le backend déduit automatiquement le destinataire (propriétaire de l'annonce).
  */
-export async function createConversation(annonceId: string) {
-    try {
-        return await fetchApi<any>('/messaging/conversations/', {
-            method: 'POST',
-            body: JSON.stringify({ listing: annonceId }),
-        });
-    } catch (error) {
-        console.error('[API] createConversation error:', error);
+export async function createConversation(
+    annonceId: string,
+    content: string,
+    recipientId?: string
+): Promise<{ conversation: any; message: any }> {
+    const body: any = {
+        listing_id: annonceId,
+        content,
+    };
+    if (recipientId) {
+        body.recipient_id = recipientId;
     }
+    return await fetchApi<any>('/messaging/messages', {
+        method: 'POST',
+        body: JSON.stringify(body),
+    });
 }
 
 /**
@@ -909,7 +944,7 @@ export async function createConversation(annonceId: string) {
  */
 export async function deleteConversation(conversationId: string) {
     try {
-        return await fetchApi<any>(`/messaging/conversations/${conversationId}/`, {
+        return await fetchApi<any>(`/messaging/conversations/${conversationId}`, {
             method: 'DELETE',
         });
     } catch (error) {
@@ -980,7 +1015,7 @@ export async function getUserProductsByCategory(categorySlug: string) {
  */
 export async function getAdminAllListings() {
     try {
-        const response = await fetchApi<any>('/listings/');
+        const response = await fetchApi<any>('/listings/admin-all');
         const results = Array.isArray(response) ? response : (response.results || []);
 
         return results.map((item: any) => ({
@@ -1020,7 +1055,7 @@ export async function getModerationListings() {
  */
 export async function approveListing(id: string) {
     try {
-        return await fetchApi<any>(`/listings/${id}/approve/`, { method: 'POST' });
+        return await fetchApi<any>(`/listings/${id}/approve`, { method: 'POST' });
     } catch (error) {
         console.error('[API] approveListing error:', error);
         throw error;
@@ -1032,7 +1067,7 @@ export async function approveListing(id: string) {
  */
 export async function rejectListing(id: string) {
     try {
-        return await fetchApi<any>(`/listings/${id}/reject/`, { method: 'POST' });
+        return await fetchApi<any>(`/listings/${id}/reject`, { method: 'POST' });
     } catch (error) {
         console.error('[API] rejectListing error:', error);
         throw error;
@@ -1044,7 +1079,7 @@ export async function rejectListing(id: string) {
  */
 export async function getAdminCategories() {
     try {
-        const response = await fetchApi<any>('/listings/categories/');
+        const response = await fetchApi<any>('/listings/categories');
         return Array.isArray(response) ? response : (response.results || []);
     } catch (error) {
         console.error('[API] getAdminCategories error:', error);
@@ -1057,7 +1092,7 @@ export async function getAdminCategories() {
  */
 export async function createCategory(data: any) {
     try {
-        return await fetchApi<any>('/listings/categories/', {
+        return await fetchApi<any>('/listings/categories', {
             method: 'POST',
             body: JSON.stringify(data),
         });
@@ -1072,7 +1107,7 @@ export async function createCategory(data: any) {
  */
 export async function updateCategory(id: string, data: any) {
     try {
-        return await fetchApi<any>(`/listings/categories/${id}/`, {
+        return await fetchApi<any>(`/listings/categories/${id}`, {
             method: 'PATCH',
             body: JSON.stringify(data),
         });
@@ -1087,7 +1122,7 @@ export async function updateCategory(id: string, data: any) {
  */
 export async function deleteCategory(id: string) {
     try {
-        return await fetchApi<any>(`/listings/categories/${id}/`, {
+        return await fetchApi<any>(`/listings/categories/${id}`, {
             method: 'DELETE',
         });
     } catch (error) {
@@ -1101,7 +1136,7 @@ export async function deleteCategory(id: string) {
  */
 export async function getAdminUsers() {
     try {
-        const response = await fetchApi<any>('/auth/users/');
+        const response = await fetchApi<any>('/auth/users');
         return Array.isArray(response) ? response : (response.results || []);
     } catch (error) {
         console.error('[API] getAdminUsers error:', error);
@@ -1114,7 +1149,7 @@ export async function getAdminUsers() {
  */
 export async function updateAdminUser(id: string, data: any) {
     try {
-        return await fetchApi<any>(`/auth/users/${id}/`, {
+        return await fetchApi<any>(`/auth/users/${id}`, {
             method: 'PATCH',
             body: JSON.stringify(data),
         });
@@ -1129,7 +1164,7 @@ export async function updateAdminUser(id: string, data: any) {
  */
 export async function deleteAdminUser(id: string) {
     try {
-        return await fetchApi<any>(`/auth/users/${id}/`, {
+        return await fetchApi<any>(`/auth/users/${id}`, {
             method: 'DELETE',
         });
     } catch (error) {
@@ -1197,7 +1232,7 @@ export async function deleteBoost(id: string) {
  */
 export async function sendBroadcastNotification(data: { title: string, message: string, action_url?: string }) {
     try {
-        return await fetchApi<any>('/notifications/broadcast/', {
+        return await fetchApi<any>('/notifications/broadcast', {
             method: 'POST',
             body: JSON.stringify(data),
         });
@@ -1218,4 +1253,5 @@ export function formatPrice(price: number): string {
         maximumFractionDigits: 0,
     }).format(price);
 }
+
 

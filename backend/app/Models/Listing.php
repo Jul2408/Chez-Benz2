@@ -39,6 +39,11 @@ class Listing extends Model
         return $this->belongsToMany(User::class, 'favorites');
     }
 
+    public function boosts()
+    {
+        return $this->hasMany(Boost::class);
+    }
+
     protected static function boot()
     {
         parent::boot();

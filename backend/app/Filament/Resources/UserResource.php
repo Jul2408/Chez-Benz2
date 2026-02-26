@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
+use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -30,7 +31,7 @@ class UserResource extends Resource
                         Forms\Components\TextInput::make('email')
                             ->email()
                             ->required()
-                            ->unique(ignoreRecord: true),
+                            ->unique(null, null, null, true),
                         Forms\Components\Select::make('role')
                             ->options([
                                 'USER' => 'Utilisateur',
@@ -61,6 +62,12 @@ class UserResource extends Resource
                             ->default(0),
                         Forms\Components\Toggle::make('profile.is_verified')
                             ->label('Vérifié'),
+                        Forms\Components\FileUpload::make('profile.avatar')
+                            ->label('Avatar')
+                            ->image()
+                            ->disk('public')
+                            ->directory('avatars')
+                            ->columnSpanFull(),
                     ])->columns(2),
             ]);
     }
@@ -90,7 +97,7 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('role')
@@ -114,7 +121,8 @@ class UserResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\ListingsRelationManager::class,
+            RelationManagers\ConversationsRelationManager::class,
         ];
     }
 

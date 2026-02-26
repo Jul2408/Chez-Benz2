@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { user, setUser, logout: storeLogout } = useAuthStore();
     const router = useRouter();
 
-    const fetchUser = async () => {
+    const fetchUser = async (force = false) => {
         // Vérifier si un token existe avant de faire un appel réseau
         const token = typeof window !== 'undefined' ? localStorage.getItem('chezben2_token') : null;
         if (!token || token === 'undefined' || token === 'null') {
@@ -33,12 +33,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Si on a déjà le user en store (navigation entre pages), on évite un appel réseau
-        if (user) {
+        if (user && !force) {
             setIsLoading(false);
             return;
         }
 
-        // Premier chargement avec un token valide → on récupère le profil
+        // Chargement avec un token valide → on récupère le profil
         setIsLoading(true);
         try {
             const profile = await getCurrentProfile();
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const refreshProfile = async () => {
-        await fetchUser();
+        await fetchUser(true);
     };
 
     const signOut = async () => {
