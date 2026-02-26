@@ -451,7 +451,7 @@ export async function getAnnonces(
         if (params.user_id) queryParams.set('user', params.user_id);
 
         console.log('[API] Fetching annonces with params:', params);
-        const response = await fetchApi<any>(`/listings/?${queryParams.toString()}`);
+        const response = await fetchApi<any>(`/listings?${queryParams.toString()}`);
 
         const results = Array.isArray(response) ? response : (response.results || []);
         const total = response.count || results.length;
@@ -506,7 +506,7 @@ export async function getAnnonces(
 export async function getUserListings(): Promise<AnnonceCard[]> {
     try {
         console.log('[API] Fetching user listings...');
-        const response = await fetchApi<any>('/listings/?my_listings=true');
+        const response = await fetchApi<any>('/listings?my_listings=true');
         const results = Array.isArray(response) ? response : (response.results || []);
 
         console.log(`[API] Found ${results.length} user listings`);
@@ -545,7 +545,7 @@ export async function getUserListings(): Promise<AnnonceCard[]> {
  */
 export async function getAnnonceBySlug(slug: string): Promise<AnnonceWithRelations | null> {
     try {
-        const item = await fetchApi<any>(`/listings/detail_by_slug/?slug=${slug}`);
+        const item = await fetchApi<any>(`/listings/detail_by_slug?slug=${slug}`);
 
         if (!item) return null;
 
@@ -573,7 +573,7 @@ export async function getAnnonceBySlug(slug: string): Promise<AnnonceWithRelatio
  */
 export async function getAnnonceById(id: string): Promise<AnnonceWithRelations | null> {
     try {
-        const item = await fetchApi<any>(`/listings/${id}/`);
+        const item = await fetchApi<any>(`/listings/${id}`);
 
         if (!item) return null;
 
@@ -601,7 +601,7 @@ export async function getAnnonceById(id: string): Promise<AnnonceWithRelations |
  */
 export async function getCategories(): Promise<Category[]> {
     try {
-        const response = await fetchApi<any>('/listings/categories/');
+        const response = await fetchApi<any>('/listings/categories');
         return Array.isArray(response) ? response : (response.results || []);
     } catch (error) {
         console.error('[API] getCategories error:', error);
@@ -1178,7 +1178,7 @@ export async function deleteAdminUser(id: string) {
  */
 export async function getPlatformSettings() {
     try {
-        return await fetchApi<any>('/settings/');
+        return await fetchApi<any>('/settings');
     } catch (error) {
         console.error('[API] getPlatformSettings error:', error);
         return null;
@@ -1190,7 +1190,7 @@ export async function getPlatformSettings() {
  */
 export async function updatePlatformSettings(data: any) {
     try {
-        return await fetchApi<any>('/settings/', {
+        return await fetchApi<any>('/settings', {
             method: 'PATCH',
             body: JSON.stringify(data),
         });
@@ -1205,7 +1205,7 @@ export async function updatePlatformSettings(data: any) {
  */
 export async function getAdminBoosts() {
     try {
-        const response = await fetchApi<any>('/listings/boost/');
+        const response = await fetchApi<any>('/listings/boost');
         return Array.isArray(response) ? response : (response.results || []);
     } catch (error) {
         console.error('[API] getAdminBoosts error:', error);
@@ -1218,7 +1218,7 @@ export async function getAdminBoosts() {
  */
 export async function deleteBoost(id: string) {
     try {
-        return await fetchApi<any>(`/listings/boost/${id}/`, {
+        return await fetchApi<any>(`/listings/boost/${id}`, {
             method: 'DELETE',
         });
     } catch (error) {
